@@ -1,15 +1,23 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 import aiohttp
-import discord
 from json import JSONDecodeError
-from warnings import deprecated
+from typing_extensions import deprecated
 from .utils import fmt_amount, fmt_playtime
 
+try:
+    import discord
+except ImportError:
+    logger.warning("Some functionality requires discord.py, Install with: pip install donutstats[discord]")
+
 class DonutSMPError(Exception):
-    """Raised when donutsmp cannot handle a query, Very likely could not find username"""
+    """Raised when DonutSMP cannot handle a query, Very likely could not find username"""
     pass
 
 class UnauthorizedRequest(Exception):
-    """Raised when donutsmp returns a 401 unauthorized"""
+    """Raised when DonutSMP returns a 401 unauthorized"""
     pass
 
 class UnexpectedError(Exception):
@@ -128,7 +136,8 @@ class DonutStats():
 
         return f"{raw_uuid[0:8]}-{raw_uuid[8:12]}-{raw_uuid[12:16]}-{raw_uuid[16:20]}-{raw_uuid[20:]}"
 
-    async def get_stats_embed(self, username: str, color: discord.Color | None = None) -> discord.Embed:
+    async def get_stats_embed(self, username: str, color: str | None = None):
+            """Returns a premade stats embed, REQUIRES discord.py"""
             stats = await self.get_stats(username=username)
             if color is None:
                 color = discord.Color.blurple()
