@@ -1,16 +1,5 @@
 import aiohttp, json
-
-class DonutSMPError(Exception):
-    """Raised when donutsmp cannot handle a query, Very likely could not find username"""
-    pass
-
-class UnauthorizedRequest(Exception):
-    """Raised when donutsmp returns a 401 unauthorized"""
-    pass
-
-class UnexpectedError(Exception):
-    """Raised when there is an unexpected api response status"""
-    pass
+from .exceptions import DonutSMPError, UnauthorizedRequest, UnexpectedError
 
 class DonutStats():
     def __init__(self, donutsmp_api_key: str):
@@ -25,7 +14,7 @@ class DonutStats():
             self._session = aiohttp.ClientSession(timeout=self._timeout)
         return self._session
 
-    async def get_stats(self, username: str) -> dict:
+    async def get_stats(self, username: str) -> dict[str, str]:
         """
         Returns a users donutsmp stats as a dict
 
@@ -45,15 +34,19 @@ class DonutStats():
         session = self._get_session()
         async with session.get(url, headers=self._donutsmp_headers) as resp:
             if resp.status == 401:
-                await self.close()
                 raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
             if resp.status != 200:
-                await self.close()
-                raise DonutSMPError(f"Unexpected status (Status: {resp.status})")
+                raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
 
             text = await resp.text()
-            data: dict = json.loads(text)
-            return data.get('result')
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                raise UnexpectedError(f"Failed parsing DonutSMP Text response into a dict (Raw response: {text})")
+            result = data.get('result')
+            if not result:
+                raise UnexpectedError(f"The DonutSMP api failed to return a result field")
+            return result
 
     async def __aenter__(self):
         return self

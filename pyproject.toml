@@ -14,8 +14,8 @@ keywords = ["donutsmp", "minecraft", "stats", "async"]
 dependencies = ["aiohttp>=3.9"]
 
 [project.urls]
-Homepage = "https://github.com/ryder4est/donutstats"
-Issues = "https://github.com/ryder4est/donutstats/issues"
+Homepage = "https://github.com/optcopa/donutstats"
+Issues = "https://github.com/optccopa/donutstats/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/donutstats"]

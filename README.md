@@ -10,7 +10,7 @@ pip install donutstats
 
 ```python
 import asyncio
-from DonutStats import DonutStats
+from donutstats import DonutStats
 
 async def main():
     donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api)")
