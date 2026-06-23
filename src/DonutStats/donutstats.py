@@ -56,19 +56,22 @@ class DonutStats():
         """
         url = f"{self._base_url}/stats/{username}"
         session = self._resolve_session()
-        async with session.get(url, headers=self._donutsmp_headers) as resp:
-            if resp.status == 401:
-                raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
-            if resp.status != 200:
-                raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
-            try:
-                data: dict = await resp.json(content_type=None)
-            except JSONDecodeError as e:
-                raise UnexpectedError("DonutSMP API failed to return valid json") from e
-            result = data.get('result')
-            if not result:
-                raise UnexpectedError(f"The DonutSMP api failed to return a result field")
-            return result
+        try:
+            async with session.get(url, headers=self._donutsmp_headers) as resp:
+                if resp.status == 401:
+                    raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
+                if resp.status != 200:
+                    raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
+                try:
+                    data: dict = await resp.json(content_type=None)
+                except JSONDecodeError as e:
+                    raise UnexpectedError("DonutSMP API failed to return valid json") from e
+                result = data.get('result')
+                if not result:
+                    raise UnexpectedError(f"The DonutSMP api failed to return a result field")
+                return result
+        except aiohttp.ClientError as e:
+            raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
         
     async def _get_stat(self, username: str, field: str) -> int:
         """Fetch a single stat field for a user and convert it to an int"""
