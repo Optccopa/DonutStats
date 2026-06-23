@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,7 +10,9 @@ from .utils import fmt_amount, fmt_playtime
 
 try:
     import discord
+    _DISCORD = True
 except ImportError:
+    _DISCORD = False
     logger.warning("Some functionality requires discord.py, Install with: pip install donutstats[discord]")
 
 class DonutSMPError(Exception):
@@ -20,6 +23,9 @@ class UnauthorizedRequest(Exception):
     """Raised when DonutSMP returns a 401 unauthorized"""
     pass
 
+class RateLimited(Exception):
+    """Raised when DonutSMP returns a 429 ratelimited"""
+
 class UnexpectedError(Exception):
     """Raised when there is an unexpected api response status"""
     pass
@@ -27,7 +33,6 @@ class UnexpectedError(Exception):
 class DonutStats():
     def __init__(self, donutsmp_api_key: str):
         self._base_url = "https://api.donutsmp.net/v1"
-        self._mojang_base_url = "https://api.mojang.com"
         self._donutsmp_headers = {"Authorization": f"Bearer {donutsmp_api_key}"}
         self._session: aiohttp.ClientSession | None = None
         self._timeout = aiohttp.ClientTimeout(total=10)
@@ -60,6 +65,8 @@ class DonutStats():
             async with session.get(url, headers=self._donutsmp_headers) as resp:
                 if resp.status == 401:
                     raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
+                if resp.status == 429:
+                    raise RateLimited(f"")
                 if resp.status != 200:
                     raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
                 try:
@@ -123,48 +130,32 @@ class DonutStats():
         """Returns a users DonutSMP shards"""
         return await self._get_stat(username, "shards")
     
-    async def _get_uuid(self, username: str) -> str:
-        """Returns a players mojang uuid"""
-        url = f"{self._mojang_base_url}/users/profiles/minecraft/{username}"
-        session = self._resolve_session()
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                raise UnexpectedError(f"Failed to fetch the mojang uuid for {username}")
-            try:
-                data = await resp.json()
-            except JSONDecodeError as e:
-                raise UnexpectedError("Failed to parse json in mojang uuid request") from e
+    async def get_stats_embed(self, username: str, color: discord.Color | None = None):
+        """Returns a premade stats embed, REQUIRES pip install donutstats[discord]"""
+        if not _DISCORD:
+            raise RuntimeError("get_stats_embed() requires donutstats[discord], Install with: pip install donutstats[discord]")
+        stats: dict = await self.get_stats(username=username)
+        if color is None:
+            color = discord.Color.blurple()
+        embed = discord.Embed(
+            title=f"{username}'s Stats",
+            description=(
+                f"**Balance:** {fmt_amount(stats['money'])}\n"
+                f"**Shards:** {fmt_amount(stats['shards'])}\n"
+                f"**Playtime:** {fmt_playtime(int(stats['playtime']))}\n"
+                f"**Kills:** {fmt_amount(stats['kills'])}\n"
+                f"**Deaths:** {fmt_amount(stats['deaths'])}\n"
+                f"**Blocks Placed:** {fmt_amount(stats['placed_blocks'])}\n"
+                f"**Blocks Broken:** {fmt_amount(stats['broken_blocks'])}\n"
+                f"**Mobs Killed:** {fmt_amount(stats['mobs_killed'])}\n"
+                f"**Money Spent On /shop:** {fmt_amount(stats['money_spent_on_shop'])}\n"
+                f"**Money Made From /sell:** {fmt_amount(stats['money_made_from_sell'])}"
+            ),
+            color=color
+        )
+        embed.set_thumbnail(url=f"https://mc-heads.net/avatar/{username}")
 
-        raw_uuid = data["id"]
-
-        return f"{raw_uuid[0:8]}-{raw_uuid[8:12]}-{raw_uuid[12:16]}-{raw_uuid[16:20]}-{raw_uuid[20:]}"
-
-    async def get_stats_embed(self, username: str, color: str | None = None):
-            """Returns a premade stats embed, REQUIRES discord.py"""
-            stats = await self.get_stats(username=username)
-            if color is None:
-                color = discord.Color.blurple()
-            embed = discord.Embed(
-                title=f"{username}'s Stats",
-                description=(
-                    f"**Balance:** {fmt_amount(stats['money'])}\n"
-                    f"**Shards:** {fmt_amount(stats['shards'])}\n"
-                    f"**Playtime:** {fmt_playtime(int(stats['playtime']))}\n"
-                    f"**Kills:** {fmt_amount(stats['kills'])}\n"
-                    f"**Deaths:** {fmt_amount(stats['deaths'])}\n"
-                    f"**Blocks Placed:** {fmt_amount(stats['placed_blocks'])}\n"
-                    f"**Blocks Broken:** {fmt_amount(stats['broken_blocks'])}\n"
-                    f"**Mobs Killed:** {fmt_amount(stats['mobs_killed'])}\n"
-                    f"**Money Spent On /shop:** {fmt_amount(stats['money_spent_on_shop'])}\n"
-                    f"**Money Made From /sell:** {fmt_amount(stats['money_made_from_sell'])}"
-                ),
-                color=color
-            )
-            uuid = await self._get_uuid(username)
-            embed.set_thumbnail(url=f"https://mc-heads.net/avatar/{uuid}")
-
-            return embed
-
+        return embed
 
     async def __aenter__(self):
         return self
