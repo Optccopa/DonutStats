@@ -2,7 +2,7 @@ from .donutstats import (
     DonutStats,
     DonutSMPError,
     UnauthorizedRequest,
-    UnexpectedError,
+    UnexpectedError
 )
 
 __all__ = [

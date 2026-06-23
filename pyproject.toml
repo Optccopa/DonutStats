@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "DonutStats"
+name = "donutstats"
 version = "0.1.0"
 description = "Async client for the DonutSMP API"
 readme = "README.md"
@@ -11,10 +11,10 @@ requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [{ name = "optccopa" }]
 keywords = ["donutsmp", "minecraft", "stats", "async"]
-dependencies = ["aiohttp>=3.9"]
+dependencies = ["aiohttp>=3.9", "discord>=3.7.0"]
 
 [project.urls]
-Homepage = "https://github.com/optcopa/donutstats"
+Homepage = "https://github.com/optccopa/donutstats"
 Issues = "https://github.com/optccopa/donutstats/issues"
 
 [tool.hatch.build.targets.wheel]
