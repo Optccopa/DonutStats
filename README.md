@@ -29,7 +29,7 @@ async def main():
 asyncio.run(main())
 ```
 
-# Simple discord bot cog usage
+### Simple discord bot cog usage
 ```python
 import discord
 from discord.ext import commands
