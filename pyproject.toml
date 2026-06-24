@@ -4,13 +4,22 @@ build-backend = "hatchling.build"
 
 [project]
 name = "donutstats"
-version = "1.1.1"
+version = "1.1.2"
 description = "Async client for the DonutSMP API"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [{ name = "optccopa" }]
 keywords = ["donutsmp", "minecraft", "stats", "async"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
 dependencies = ["aiohttp>=3.9"]
 
 [project.optional-dependencies]
