@@ -1,27 +1,50 @@
-import asyncio
-import os
+from __future__ import annotations
 
+import random
+import string
+from json import JSONDecodeError
+from unittest.mock import AsyncMock, MagicMock
+
+import aiohttp
 import pytest
-import pytest_asyncio
-from dotenv import load_dotenv
 
-# Seconds to wait after each test
-REQUEST_DELAY = 2.0
 
-from donutstats import DonutStats, DonutSMPError, UnexpectedError
+def rand_ign() -> str:
+    """Random Minecraft-style username (3-16 chars). Mocked, so any name works."""
+    length = random.randint(3, 16)
+    return "".join(random.choices(string.ascii_letters + string.digits + "_", k=length))
 
-load_dotenv()
-TOKEN = os.getenv("DONUTSMP_API_TOKEN")
-
-# Every test below sends real requests to DonutSMP, so you must configure a token in .env
-pytestmark = pytest.mark.skipif(
-    not TOKEN, reason="DONUTSMP_API_TOKEN not set in .env"
+from donutstats import (
+    DonutStats,
+    DonutSMPError,
+    UnauthorizedRequest,
+    RateLimited,
+    UnexpectedError,
 )
+from donutstats.utils import fmt_amount, fmt_playtime
 
-# A real DonutSMP player to assert against
-KNOWN_USER = "copa6076"
+SAMPLE_RESULT = {
+    "money": "2577174314",
+    "shards": "8461",
+    "kills": "24",
+    "deaths": "92",
+    "playtime": "1050579440",
+    "placed_blocks": "7524",
+    "broken_blocks": "7285",
+    "mobs_killed": "63",
+    "money_spent_on_shop": "2688539",
+    "money_made_from_sell": "1.1477798052923137e+8",
+}
 
-# Every method that returns a single int stat
+UNKNOWN_USER_BODY = {
+    "status": 500,
+    "reason": "Error handling request",
+    "message": (
+        "Could not handle your request. This may be because the "
+        "specified user/page/item does not exist."
+    ),
+}
+
 INT_METHODS = [
     "get_broken_blocks",
     "get_deaths",
@@ -35,59 +58,163 @@ INT_METHODS = [
     "get_shards",
 ]
 
-# Every key get_stats should return
-STAT_KEYS = [
-    "broken_blocks",
-    "deaths",
-    "kills",
-    "mobs_killed",
-    "money",
-    "money_made_from_sell",
-    "money_spent_on_shop",
-    "placed_blocks",
-    "playtime",
-    "shards",
-]
+
+def make_client(
+    *, status: int = 200, payload=None, json_exc: Exception | None = None,
+    enter_exc: Exception | None = None,
+) -> tuple[DonutStats, MagicMock]:
+    resp = MagicMock()
+    resp.status = status
+    resp.text = AsyncMock(return_value="<mock body>")
+    if json_exc is not None:
+        resp.json = AsyncMock(side_effect=json_exc)
+    else:
+        resp.json = AsyncMock(return_value=payload)
+
+    cm = MagicMock()
+    if enter_exc is not None:
+        cm.__aenter__ = AsyncMock(side_effect=enter_exc)
+    else:
+        cm.__aenter__ = AsyncMock(return_value=resp)
+    cm.__aexit__ = AsyncMock(return_value=False)
+
+    session = MagicMock()
+    session.closed = False
+    session.get = MagicMock(return_value=cm)
+    session.close = AsyncMock()
+
+    ds = DonutStats("fake-token")
+    ds._session = session
+    ds._resolve_session = lambda: session
+    return ds, session
+
+async def test_get_stats_returns_result_dict():
+    ds, session = make_client(payload={"result": SAMPLE_RESULT})
+    stats = await ds.get_stats("copa6076")
+    assert stats == SAMPLE_RESULT
+    # auth header sent
+    _, kwargs = session.get.call_args
+    assert kwargs["headers"] == {"Authorization": "Bearer fake-token"}
 
 
-@pytest_asyncio.fixture(autouse=True)
-async def _throttle():
-    # Space out tests so the api doesnt ratelimit
-    yield
-    await asyncio.sleep(REQUEST_DELAY)
+async def test_get_stats_url_encodes_username():
+    ds, session = make_client(payload={"result": SAMPLE_RESULT})
+    await ds.get_stats("weird / name")
+    url = session.get.call_args.args[0]
+    assert url.endswith("/stats/weird%20%2F%20name")
+
+@pytest.mark.parametrize(
+    "status,exc",
+    [
+        (401, UnauthorizedRequest),
+        (429, RateLimited),
+        (404, DonutSMPError),
+        (500, DonutSMPError),
+    ],
+)
+async def test_status_codes_raise(status, exc):
+    ds, _ = make_client(status=status, payload={"result": SAMPLE_RESULT})
+    with pytest.raises(exc):
+        await ds.get_stats("copa6076")
 
 
-@pytest_asyncio.fixture
-async def client():
-    ds = DonutStats(TOKEN)
-    yield ds
-    await ds.close()
+async def test_unknown_user_raises_donutsmp_error():
+    ds, _ = make_client(status=500, payload=UNKNOWN_USER_BODY)
+    with pytest.raises(DonutSMPError):
+        await ds.get_stats(rand_ign())
 
 
-async def test_get_stats_returns_all_keys(client):
-    stats = await client.get_stats(KNOWN_USER)
-    assert isinstance(stats, dict)
-    for key in STAT_KEYS:
-        assert key in stats, f"missing key: {key}"
-        assert isinstance(stats[key], str)
+async def test_invalid_json_raises_unexpected():
+    ds, _ = make_client(json_exc=JSONDecodeError("bad", "doc", 0))
+    with pytest.raises(UnexpectedError):
+        await ds.get_stats("copa6076")
 
 
+async def test_missing_result_field_raises_unexpected():
+    ds, _ = make_client(payload={"something_else": 1})
+    with pytest.raises(UnexpectedError):
+        await ds.get_stats("copa6076")
+
+
+async def test_client_error_wrapped_as_unexpected():
+    ds, _ = make_client(enter_exc=aiohttp.ClientError("boom"))
+    with pytest.raises(UnexpectedError):
+        await ds.get_stats("copa6076")
 @pytest.mark.parametrize("method", INT_METHODS)
-async def test_int_methods_return_nonnegative_int(client, method):
-    value = await getattr(client, method)(KNOWN_USER)
+async def test_int_methods_return_int(method):
+    ds, _ = make_client(payload={"result": SAMPLE_RESULT})
+    value = await getattr(ds, method)("copa6076")
     assert isinstance(value, int)
     assert value >= 0
 
 
-@pytest.mark.parametrize("username", ["this_user_does_not_exist_xyz", "____", "a"])
-async def test_unknown_user_raises(client, username):
-    with pytest.raises((DonutSMPError, UnexpectedError)):
-        await client.get_stats(username)
+async def test_balance_maps_to_money():
+    ds, _ = make_client(payload={"result": SAMPLE_RESULT})
+    assert await ds.get_balance("copa6076") == 2577174314
 
 
+async def test_scientific_notation_parses():
+    ds, _ = make_client(payload={"result": SAMPLE_RESULT})
+    assert await ds.get_money_made_from_sell("copa6076") == 114777980
+
+
+async def test_non_numeric_field_raises_unexpected():
+    result = dict(SAMPLE_RESULT, kills="not-a-number")
+    ds, _ = make_client(payload={"result": result})
+    with pytest.raises(UnexpectedError):
+        await ds.get_kills("copa6076")
+
+
+async def test_missing_field_raises_unexpected():
+    result = {k: v for k, v in SAMPLE_RESULT.items() if k != "shards"}
+    ds, _ = make_client(payload={"result": result})
+    with pytest.raises(UnexpectedError):
+        await ds.get_shards("copa6076")
+
+
+# --------------------------------------------------------------------------- #
+# session lifecycle
+# --------------------------------------------------------------------------- #
 async def test_context_manager_closes_session():
-    async with DonutStats(TOKEN) as ds:
-        stats = await ds.get_stats(KNOWN_USER)
-        assert "money" in stats
-        session = ds._session
-    assert session.closed
+    ds, session = make_client(payload={"result": SAMPLE_RESULT})
+    async with ds as c:
+        await c.get_stats("copa6076")
+    session.close.assert_awaited_once()
+
+
+async def test_close_is_idempotent_when_no_session():
+    ds = DonutStats("fake-token")
+    # never opened a session; close() must not blow up
+    await ds.close()
+
+
+# --------------------------------------------------------------------------- #
+# formatting helpers (pure)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (0, "0"),
+        (500, "500"),
+        (1500, "1.5k"),
+        (8410, "8.41k"),
+        (1_000_000, "1m"),
+        (2_920_840_615, "2.92b"),
+        (1_500_000_000_000, "1.5t"),
+    ],
+)
+def test_fmt_amount(value, expected):
+    assert fmt_amount(value) == expected
+
+
+@pytest.mark.parametrize(
+    "ms,expected",
+    [
+        (0, "0m"),
+        (90_000, "1m"),
+        (3_600_000, "1h"),
+        (90_060_000, "1d 1h 1m"),
+    ],
+)
+def test_fmt_playtime(ms, expected):
+    assert fmt_playtime(ms) == expected

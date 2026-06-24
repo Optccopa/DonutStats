@@ -1,19 +1,24 @@
 from __future__ import annotations
+
 import logging
+from json import JSONDecodeError
+from urllib.parse import quote
+
+import aiohttp
+
+from .utils import fmt_amount, fmt_playtime
 
 logger = logging.getLogger(__name__)
 
-import aiohttp
-from json import JSONDecodeError
-from urllib.parse import quote
-from .utils import fmt_amount, fmt_playtime
-
 try:
     import discord
+
     _DISCORD = True
 except ImportError:
     _DISCORD = False
-    logger.warning("Some functionality requires discord.py, Install with: pip install donutstats[discord]")
+    logger.info(
+        "Some functionality requires discord.py, Install with: pip install donutstats[discord]"
+    )
 
 class DonutSMPError(Exception):
     """Raised when DonutSMP cannot handle a query, Very likely could not find username"""
