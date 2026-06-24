@@ -66,7 +66,7 @@ class DonutStats:
                 if resp.status == 401:
                     raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
                 if resp.status == 429:
-                    raise RateLimited(f"Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Second")
+                    raise RateLimited(f"Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute")
                 if resp.status != 200:
                     raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
                 try:

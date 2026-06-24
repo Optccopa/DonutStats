@@ -5,8 +5,8 @@ import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 
-# Seconds to wait after each test so the live API doesn't rate-limit (429) us
-REQUEST_DELAY = 1.0
+# Seconds to wait after each test
+REQUEST_DELAY = 2.0
 
 from donutstats import DonutStats, DonutSMPError, UnexpectedError
 
