@@ -3,6 +3,9 @@
 Async Python wrapper for the [DonutSMP](https://donutsmp.net) API.
 
 ![PyPI](https://img.shields.io/pypi/v/donutstats) ![Python](https://img.shields.io/pypi/pyversions/donutstats) ![License](https://img.shields.io/pypi/l/donutstats)
+
+[![tests](https://github.com/optccopa/donutstats/actions/workflows/tests.yml/badge.svg)](https://github.com/optccopa/donutstats/actions/workflows/tests.yml)
+
 ## Install
 
 ### Basic Install
