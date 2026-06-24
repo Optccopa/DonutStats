@@ -4,6 +4,7 @@ from .donutstats import (
     DonutStats,
     DonutSMPError,
     UnauthorizedRequest,
+    RateLimited,
     UnexpectedError
 )
 
@@ -11,6 +12,7 @@ __all__ = [
     "DonutStats",
     "DonutSMPError",
     "UnauthorizedRequest",
+    "RateLimited",
     "UnexpectedError",
 ]
 

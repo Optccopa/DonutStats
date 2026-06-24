@@ -1,11 +1,20 @@
 # donutstats
 
-Async Python client for the [DonutSMP](https://donutsmp.net) API.
+Async Python wrapper for the [DonutSMP](https://donutsmp.net) API.
+
+![PyPI](https://img.shields.io/pypi/v/donutstats) ![Python](https://img.shields.io/pypi/pyversions/donutstats) ![License](https://img.shields.io/pypi/l/donutstats)
 ## Install
 
+### Basic Install
 ```bash
 pip install donutstats
 ```
+
+### Discord Feature Usage
+```bash
+pip install donutstats[discord]
+```
+
 ## Usage
 
 ### Simple api usage
@@ -14,7 +23,7 @@ import asyncio
 from donutstats import DonutStats
 
 async def main():
-    donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api)")
+    donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api")
 
     # Full stats dict
     stats = await donutstats.get_stats(username="copa6076") # Pull the stats from donutsmp api
@@ -53,9 +62,10 @@ async def setup(bot: commands.Bot):
 ```
 ## Exceptions
 
-- `DonutSMPError` — query could not be handled (likely unknown username).
-- `UnauthorizedRequest` — 401, bad/missing API key.
-- `UnexpectedError` — unexpected API response status.
+- `DonutSMPError` - Raised when DonutSMP cannot handle a query, Very likely could not find username
+- `UnauthorizedRequest` - Raised when DonutSMP returns a 401 unauthorized.
+- `RateLimited` - Raised when DonutSMP returns a 429 ratelimited
+- `UnexpectedError` - Raised when there is an unexpected api response status.
 
 ## License
 

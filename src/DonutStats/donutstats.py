@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 import aiohttp
 from json import JSONDecodeError
+from urllib.parse import quote
 from typing_extensions import deprecated
 from .utils import fmt_amount, fmt_playtime
 
@@ -30,7 +31,7 @@ class UnexpectedError(Exception):
     """Raised when there is an unexpected api response status"""
     pass
 
-class DonutStats():
+class DonutStats:
     def __init__(self, donutsmp_api_key: str):
         self._base_url = "https://api.donutsmp.net/v1"
         self._donutsmp_headers = {"Authorization": f"Bearer {donutsmp_api_key}"}
@@ -59,14 +60,14 @@ class DonutStats():
             playtime              string
             shards                string
         """
-        url = f"{self._base_url}/stats/{username}"
+        url = f"{self._base_url}/stats/{quote(username, safe='')}"
         session = self._resolve_session()
         try:
             async with session.get(url, headers=self._donutsmp_headers) as resp:
                 if resp.status == 401:
                     raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
                 if resp.status == 429:
-                    raise RateLimited(f"")
+                    raise RateLimited(f"Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Second")
                 if resp.status != 200:
                     raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
                 try:
@@ -74,7 +75,7 @@ class DonutStats():
                 except JSONDecodeError as e:
                     raise UnexpectedError("DonutSMP API failed to return valid json") from e
                 result = data.get('result')
-                if not result:
+                if result is None:
                     raise UnexpectedError(f"The DonutSMP api failed to return a result field")
                 return result
         except aiohttp.ClientError as e:
