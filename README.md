@@ -34,15 +34,16 @@ asyncio.run(main())
 import discord
 from discord.ext import commands
 
+from donutstats import DonutStats
+
 class Stats(commands.Cog):
     def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        self.donutstats = donutstats.DonutStats("Your DonutSMP api key (generate ingame with /api")
+        # Initialize donutstats when your cog gets initialized
+        self.donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api")
 
     @discord.app_commands.command()
     async def stats(self, interaction: discord.Interaction, username: str):
-
-        # Returns a full stats embed with a headm 
+        # Returns a full stats embed
         embed: discord.Embed = await self.donutstats.get_stats_embed(username, discord.Color.blue())
 
         await interaction.response.send_message(embed=embed)
