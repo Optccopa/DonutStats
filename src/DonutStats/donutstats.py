@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 import aiohttp
 from json import JSONDecodeError
 from urllib.parse import quote
-from typing_extensions import deprecated
 from .utils import fmt_amount, fmt_playtime
 
 try:
@@ -86,7 +85,8 @@ class DonutStats:
         stats = await self.get_stats(username=username)
         strfield = stats.get(field)
         try:
-            return int(strfield)
+            # via float() so scientific-notation strings (e.g. "2.9e9") parse too
+            return int(float(strfield))
         except (ValueError, TypeError) as e:
             raise UnexpectedError(f"DonutSMP failed to return a valid '{field}' field (Got: {strfield})") from e
 
@@ -114,7 +114,6 @@ class DonutStats:
         """Returns a users DonutSMP money made from sell"""
         return await self._get_stat(username, "money_made_from_sell")
     
-    @deprecated("DonutSMP removed /shop and replaced it with quickbuy, The API still returns old data.")
     async def get_money_spent_on_shop(self, username: str) -> int:
         """Returns a users DonutSMP money spent on shop"""
         return await self._get_stat(username, "money_spent_on_shop")
