@@ -28,7 +28,7 @@ jobs:
 
       - name: Run tests
         env:
-          # Repo Settings -> Secrets and variables -> Actions.
+          # Repo Settings -> Secrets and variables -> Actions
           # Skips api tests if not available (basically everything)
           DONUTSMP_API_TOKEN: ${{ secrets.DONUTSMP_API_TOKEN }}
         run: python -m pytest -v

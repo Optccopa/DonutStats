@@ -1,8 +1,12 @@
+import asyncio
 import os
 
 import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
+
+# Seconds to wait after each test so the live API doesn't rate-limit (429) us
+REQUEST_DELAY = 1.0
 
 from donutstats import DonutStats, DonutSMPError, UnexpectedError
 
@@ -44,6 +48,13 @@ STAT_KEYS = [
     "playtime",
     "shards",
 ]
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _throttle():
+    # Space out tests so the api doesnt ratelimit
+    yield
+    await asyncio.sleep(REQUEST_DELAY)
 
 
 @pytest_asyncio.fixture
