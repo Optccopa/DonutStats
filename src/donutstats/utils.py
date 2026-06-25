@@ -8,6 +8,7 @@ def fmt_amount(n: int | float) -> str:
             v = n / divisor
             s = f"{v:.2f}".rstrip("0").rstrip(".")
             return f"{s}{suffix}"
+    return int(n)
         
 def fmt_playtime(ms: int) -> str:
     """Formats donutsmp playtime"""

@@ -30,6 +30,9 @@ class UnauthorizedRequest(Exception):
 
 class RateLimited(Exception):
     """Raised when DonutSMP returns a 429 ratelimited"""
+    def __init__(self, message: str, retry_after: float | None = None):
+        super().__init__(message)
+        self.retry_after = retry_after
 
 class UnexpectedError(Exception):
     """Raised when there is an unexpected api response status"""
@@ -48,7 +51,7 @@ class DonutStats:
             self._session = aiohttp.ClientSession(timeout=self._timeout)
         return self._session
 
-    async def get_stats(self, username: str) -> dict[str, str]:
+    async def get_stats(self, username: str) -> dict[str, int]:
         """
         Returns a users donutsmp stats as a dict
 
@@ -70,7 +73,11 @@ class DonutStats:
                 if resp.status == 401:
                     raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
                 if resp.status == 429:
-                    raise RateLimited("Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute")
+                    retry_after = resp.headers.get("Retry-After")
+                    raise RateLimited(
+                        "Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute",
+                        retry_after=float(retry_after) if retry_after else None,
+                    )
                 if resp.status != 200:
                     raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
                 try:
@@ -81,9 +88,9 @@ class DonutStats:
                 if result is None:
                     raise UnexpectedError("DonutSMP API failed to return a result field")
                 try:
-                    return {key: int(value) for key, value in result.items()}
+                    return {key: int(float(value)) for key, value in result.items()}
                 except ValueError as e:
-                    raise UnexpectedError(e) from e
+                    raise UnexpectedError("DonutSMP failed to return valid int fields") from e
 
         except aiohttp.ClientError as e:
             raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
@@ -103,9 +110,13 @@ class DonutStats:
                 if resp.status == 401:
                     raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
                 if resp.status == 429:
-                    raise RateLimited("Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute")
+                    retry_after = resp.headers.get("Retry-After")
+                    raise RateLimited(
+                        "Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute",
+                        retry_after=float(retry_after) if retry_after else None,
+                    )
                 if resp.status != 200:
-                    raise DonutSMPError("Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
+                    raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
                 try:
                     data: dict = await resp.json(content_type=None)
                 except JSONDecodeError as e:
@@ -118,15 +129,13 @@ class DonutStats:
             raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
         
     async def _get_stat(self, username: str, field: str) -> int:
-        """Fetch a single stat field for a user and convert it to an int"""
+        """Fetch a single stat field for a user"""
         stats = await self.get_stats(username=username)
-        strfield = stats.get(field)
-        try:
-            # via float() so scientific-notation strings (e.g. "2.9e9") parse too
-            return int(float(strfield))
-        except (ValueError, TypeError) as e:
-            raise UnexpectedError(f"DonutSMP failed to return a valid '{field}' field (Got: {strfield})") from e
-
+        value = stats.get(field)
+        if value is None:
+            raise UnexpectedError(f"DonutSMP failed to return a valid '{field}' field")
+        return value
+    
     async def get_broken_blocks(self, username: str) -> int:
         """Returns a users DonutSMP broken blocks"""
         return await self._get_stat(username, "broken_blocks")
