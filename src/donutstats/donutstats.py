@@ -26,13 +26,9 @@ except ImportError:
 class DonutSMPError(Exception):
     """Raised when DonutSMP cannot handle a query, Very likely could not find username"""
 
-    pass
-
 
 class UnauthorizedRequest(Exception):
     """Raised when DonutSMP returns a 401 unauthorized"""
-
-    pass
 
 
 class RateLimited(Exception):
@@ -45,8 +41,6 @@ class RateLimited(Exception):
 
 class UnexpectedError(Exception):
     """Raised when there is an unexpected api response status"""
-
-    pass
 
 
 class DonutStats:
@@ -87,8 +81,6 @@ class DonutStats:
                         "when initializing this class"
                     )
                 if resp.status == 429:
-                    # Retry-After is delay-seconds here; the RFC 9110 HTTP-date
-                    # form is ignored rather than raising.
                     raw_retry_after = resp.headers.get("Retry-After")
                     try:
                         retry_after = float(raw_retry_after) if raw_retry_after else None
@@ -118,7 +110,9 @@ class DonutStats:
                     raise UnexpectedError("DonutSMP failed to return valid int fields") from e
 
         except (TimeoutError, aiohttp.ClientError) as e:
-            raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
+            raise UnexpectedError(
+                "Aiohttp had a ClientError or TimeoutError, Refer to the traceback"
+            ) from e
 
     async def lookup(self, username: str) -> dict[str, str]:
         """
@@ -138,8 +132,6 @@ class DonutStats:
                         "when initializing this class"
                     )
                 if resp.status == 429:
-                    # Retry-After is delay-seconds here; the RFC 9110 HTTP-date
-                    # form is ignored rather than raising.
                     raw_retry_after = resp.headers.get("Retry-After")
                     try:
                         retry_after = float(raw_retry_after) if raw_retry_after else None
@@ -165,7 +157,9 @@ class DonutStats:
                     raise UnexpectedError("DonutSMP API failed to return a result field")
                 return cast("dict[str, str]", result)
         except (TimeoutError, aiohttp.ClientError) as e:
-            raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
+            raise UnexpectedError(
+                "Aiohttp had a ClientError or TimeoutError, Refer to the traceback"
+            ) from e
 
     async def _get_stat(self, username: str, field: str) -> int:
         """Fetch a single stat field for a user"""
