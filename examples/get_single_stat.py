@@ -8,6 +8,6 @@ async def main():
 
     print(shards) # 8410
 
-    await donutstats.close() # Close the aiohttp connection, aiohttp gets loud about unclosed connections
+    await donutstats.close() # Cleanly close the aiohttp connection, aiohttp gets loud about unclosed connections
 
 asyncio.run(main()) # Start the async event loop

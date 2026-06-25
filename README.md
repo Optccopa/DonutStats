@@ -20,7 +20,7 @@ pip install donutstats[discord]
 
 ## Usage
 
-### Simple api usage
+### Simple stats usage
 ```python
 import asyncio
 from donutstats import DonutStats
@@ -36,32 +36,14 @@ async def main():
     shards = await donutstats.get_shards(username="copa6076") # Pull the shards from donutsmp api
     print(shards) # 8410
 
+    # Lookup
+    lookup = await donutstats.lookup("copa6076")
+    print(lookup) # {'username': 'copa6076', 'rank': 'Unknown', 'location': 'Overworld'}
+    print(lookup.get('location')) # 'Overworld'
+
     await donutstats.close() # Close it when you close your bot
 
 asyncio.run(main())
-```
-
-### Simple discord bot cog usage
-```python
-import discord
-from discord.ext import commands
-
-from donutstats import DonutStats
-
-class Stats(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        # Initialize donutstats when your cog gets initialized
-        self.donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api")
-
-    @discord.app_commands.command()
-    async def stats(self, interaction: discord.Interaction, username: str):
-        # Returns a full stats embed
-        embed: discord.Embed = await self.donutstats.get_stats_embed(username, discord.Color.blue())
-
-        await interaction.response.send_message(embed=embed)
-
-async def setup(bot: commands.Bot):
-    await bot.add_cog(Stats(bot))
 ```
 ## Exceptions
 

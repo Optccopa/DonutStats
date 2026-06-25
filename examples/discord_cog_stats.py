@@ -15,5 +15,8 @@ class Stats(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
+    async def cog_unload(self):
+        self.donutstats.close() # Cleanly close the aiohttp connection, aiohttp gets loud about unclosed connections
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(Stats(bot))

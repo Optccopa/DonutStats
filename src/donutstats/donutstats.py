@@ -52,17 +52,16 @@ class DonutStats:
         """
         Returns a users donutsmp stats as a dict
 
-        Stats: 
-            broken_blocks         string
-            deaths	              string
-            kills                 string
-            mobs_killed           string
-            money                 string
-            money_made_from_sell  string
-            money_spent_on_shop	  string
-            placed_blocks         string
-            playtime              string
-            shards                string
+        broken_blocks         string
+        deaths	              string
+        kills                 string
+        mobs_killed           string
+        money                 string
+        money_made_from_sell  string
+        money_spent_on_shop	  string
+        placed_blocks         string
+        playtime              string
+        shards                string
         """
         url = f"{self._base_url}/stats/{quote(username, safe='')}"
         session = self._resolve_session()
@@ -80,7 +79,37 @@ class DonutStats:
                     raise UnexpectedError("DonutSMP API failed to return valid json") from e
                 result = data.get('result')
                 if result is None:
-                    raise UnexpectedError(f"The DonutSMP api failed to return a result field")
+                    raise UnexpectedError(f"DonutSMP API failed to return a result field")
+                return result
+        except aiohttp.ClientError as e:
+            raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
+        
+    async def lookup(self, username: str) -> dict:
+        """
+        Returns a users player information as a dict
+
+        location  string
+        rank      string - This is always 'Unknown' for every rank
+        username  string
+        """
+        url = f"{self._base_url}/lookup/{quote(username, safe='')}"
+        session = self._resolve_session()
+        try:
+            async with session.get(url, headers=self._donutsmp_headers) as resp:
+                print(resp.status)
+                if resp.status == 401:
+                    raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
+                if resp.status == 429:
+                    raise RateLimited(f"Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute")
+                if resp.status != 200:
+                    raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
+                try:
+                    data: dict = await resp.json(content_type=None)
+                except JSONDecodeError as e:
+                    raise UnexpectedError("DonutSMP API failed to return valid json") from e
+                result = data.get('result')
+                if result is None:
+                    raise UnexpectedError(f"DonutSMP API failed to return a result field")
                 return result
         except aiohttp.ClientError as e:
             raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e

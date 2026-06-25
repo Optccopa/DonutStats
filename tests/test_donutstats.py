@@ -45,6 +45,13 @@ UNKNOWN_USER_BODY = {
     ),
 }
 
+# Captured verbatim from a real GET /v1/lookup/copa6076 response body's `result`.
+LOOKUP_RESULT = {
+    "username": "copa6076",
+    "rank": "Unknown",
+    "location": "Overworld",
+}
+
 INT_METHODS = [
     "get_broken_blocks",
     "get_deaths",
@@ -218,3 +225,62 @@ def test_fmt_amount(value, expected):
 )
 def test_fmt_playtime(ms, expected):
     assert fmt_playtime(ms) == expected
+
+
+# --------------------------------------------------------------------------- #
+# lookup (mirrors get_stats: same status branches + result unwrap)
+# --------------------------------------------------------------------------- #
+async def test_lookup_returns_result_dict():
+    ds, session = make_client(payload={"result": LOOKUP_RESULT})
+    result = await ds.lookup("copa6076")
+    assert result == LOOKUP_RESULT
+    # hits the lookup endpoint with the auth header
+    args, kwargs = session.get.call_args
+    assert args[0].endswith("/lookup/copa6076")
+    assert kwargs["headers"] == {"Authorization": "Bearer fake-token"}
+
+
+async def test_lookup_url_encodes_username():
+    ds, session = make_client(payload={"result": LOOKUP_RESULT})
+    await ds.lookup("weird / name")
+    url = session.get.call_args.args[0]
+    assert url.endswith("/lookup/weird%20%2F%20name")
+
+
+@pytest.mark.parametrize(
+    "status,exc",
+    [
+        (401, UnauthorizedRequest),
+        (429, RateLimited),
+        (404, DonutSMPError),
+        (500, DonutSMPError),
+    ],
+)
+async def test_lookup_status_codes_raise(status, exc):
+    ds, _ = make_client(status=status, payload={"result": LOOKUP_RESULT})
+    with pytest.raises(exc):
+        await ds.lookup("copa6076")
+
+
+async def test_lookup_unknown_user_raises_donutsmp_error():
+    ds, _ = make_client(status=500, payload=UNKNOWN_USER_BODY)
+    with pytest.raises(DonutSMPError):
+        await ds.lookup(rand_ign())
+
+
+async def test_lookup_invalid_json_raises_unexpected():
+    ds, _ = make_client(json_exc=JSONDecodeError("bad", "doc", 0))
+    with pytest.raises(UnexpectedError):
+        await ds.lookup("copa6076")
+
+
+async def test_lookup_missing_result_field_raises_unexpected():
+    ds, _ = make_client(payload={"something_else": 1})
+    with pytest.raises(UnexpectedError):
+        await ds.lookup("copa6076")
+
+
+async def test_lookup_client_error_wrapped_as_unexpected():
+    ds, _ = make_client(enter_exc=aiohttp.ClientError("boom"))
+    with pytest.raises(UnexpectedError):
+        await ds.lookup("copa6076")
