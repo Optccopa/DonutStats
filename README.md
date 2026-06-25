@@ -2,10 +2,13 @@
 
 Async Python wrapper for the [DonutSMP](https://donutsmp.net) API.
 
-![PyPI](https://img.shields.io/pypi/v/donutstats?cacheSeconds=3600) [![PyPI Downloads](https://img.shields.io/pypi/dw/donutstats)](https://pypi.org/project/donutstats/) [![Tests](https://github.com/optccopa/donutstats/actions/workflows/tests.yml/badge.svg)](https://github.com/optccopa/donutstats/actions/workflows/tests.yml)
+![PyPI](https://img.shields.io/pypi/v/donutstats?cacheSeconds=3600)
+[![PyPI Downloads](https://img.shields.io/pypi/dw/donutstats)](https://pypi.org/project/donutstats/)
+[![Tests](https://github.com/optccopa/donutstats/actions/workflows/tests.yml/badge.svg)](https://github.com/optccopa/donutstats/actions/workflows/tests.yml)
 
 ## Install
 
+Requires python 3.12 or newer
 ### Basic Install
 ```bash
 pip install donutstats
@@ -24,7 +27,7 @@ import asyncio
 from donutstats import DonutStats
 
 async def main():
-    donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api")
+    donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api)")
 
     # Full stats dict
     stats = await donutstats.get_stats(username="copa6076") # Pull the stats from donutsmp api
