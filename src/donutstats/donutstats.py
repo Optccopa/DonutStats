@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from json import JSONDecodeError
+from typing import cast
 from urllib.parse import quote
 
 import aiohttp
@@ -9,6 +10,7 @@ import aiohttp
 from .utils import fmt_amount, fmt_playtime
 
 logger = logging.getLogger(__name__)
+
 
 try:
     import discord
@@ -20,23 +22,32 @@ except ImportError:
         "Some functionality requires discord.py, Install with: pip install donutstats[discord]"
     )
 
+
 class DonutSMPError(Exception):
     """Raised when DonutSMP cannot handle a query, Very likely could not find username"""
+
     pass
+
 
 class UnauthorizedRequest(Exception):
     """Raised when DonutSMP returns a 401 unauthorized"""
+
     pass
+
 
 class RateLimited(Exception):
     """Raised when DonutSMP returns a 429 ratelimited"""
+
     def __init__(self, message: str, retry_after: float | None = None):
         super().__init__(message)
         self.retry_after = retry_after
 
+
 class UnexpectedError(Exception):
     """Raised when there is an unexpected api response status"""
+
     pass
+
 
 class DonutStats:
     def __init__(self, donutsmp_api_key: str):
@@ -71,31 +82,45 @@ class DonutStats:
         try:
             async with session.get(url, headers=self._donutsmp_headers) as resp:
                 if resp.status == 401:
-                    raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
+                    raise UnauthorizedRequest(
+                        "Please generate an API Key in game with /api and supply it "
+                        "when initializing this class"
+                    )
                 if resp.status == 429:
-                    retry_after = resp.headers.get("Retry-After")
+                    # Retry-After is delay-seconds here; the RFC 9110 HTTP-date
+                    # form is ignored rather than raising.
+                    raw_retry_after = resp.headers.get("Retry-After")
+                    try:
+                        retry_after = float(raw_retry_after) if raw_retry_after else None
+                    except ValueError:
+                        retry_after = None
                     raise RateLimited(
                         "Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute",
-                        retry_after=float(retry_after) if retry_after else None,
+                        retry_after=retry_after,
                     )
                 if resp.status != 200:
-                    raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
+                    raise DonutSMPError(
+                        "Could not handle your request. This may be because the "
+                        f"specified user/page/item does not exist. (Status: {resp.status})"
+                    )
                 try:
-                    data: dict = await resp.json(content_type=None)
+                    data = await resp.json(content_type=None)
                 except JSONDecodeError as e:
                     raise UnexpectedError("DonutSMP API failed to return valid json") from e
-                result: dict = data.get('result')
+                if not isinstance(data, dict):
+                    raise UnexpectedError("DonutSMP API returned a non-object json body")
+                result = data.get("result")
                 if result is None:
                     raise UnexpectedError("DonutSMP API failed to return a result field")
                 try:
                     return {key: int(float(value)) for key, value in result.items()}
-                except ValueError as e:
+                except (ValueError, TypeError) as e:
                     raise UnexpectedError("DonutSMP failed to return valid int fields") from e
 
-        except aiohttp.ClientError as e:
+        except (TimeoutError, aiohttp.ClientError) as e:
             raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
-        
-    async def lookup(self, username: str) -> dict:
+
+    async def lookup(self, username: str) -> dict[str, str]:
         """
         Returns a users player information as a dict
 
@@ -108,26 +133,40 @@ class DonutStats:
         try:
             async with session.get(url, headers=self._donutsmp_headers) as resp:
                 if resp.status == 401:
-                    raise UnauthorizedRequest("Please generate an API Key in game with /api and supply it when initializing this class")
+                    raise UnauthorizedRequest(
+                        "Please generate an API Key in game with /api and supply it "
+                        "when initializing this class"
+                    )
                 if resp.status == 429:
-                    retry_after = resp.headers.get("Retry-After")
+                    # Retry-After is delay-seconds here; the RFC 9110 HTTP-date
+                    # form is ignored rather than raising.
+                    raw_retry_after = resp.headers.get("Retry-After")
+                    try:
+                        retry_after = float(raw_retry_after) if raw_retry_after else None
+                    except ValueError:
+                        retry_after = None
                     raise RateLimited(
                         "Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute",
-                        retry_after=float(retry_after) if retry_after else None,
+                        retry_after=retry_after,
                     )
                 if resp.status != 200:
-                    raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
+                    raise DonutSMPError(
+                        "Could not handle your request. This may be because the "
+                        f"specified user/page/item does not exist. (Status: {resp.status})"
+                    )
                 try:
-                    data: dict = await resp.json(content_type=None)
+                    data = await resp.json(content_type=None)
                 except JSONDecodeError as e:
                     raise UnexpectedError("DonutSMP API failed to return valid json") from e
-                result = data.get('result')
+                if not isinstance(data, dict):
+                    raise UnexpectedError("DonutSMP API returned a non-object json body")
+                result = data.get("result")
                 if result is None:
                     raise UnexpectedError("DonutSMP API failed to return a result field")
-                return result
-        except aiohttp.ClientError as e:
+                return cast("dict[str, str]", result)
+        except (TimeoutError, aiohttp.ClientError) as e:
             raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
-        
+
     async def _get_stat(self, username: str, field: str) -> int:
         """Fetch a single stat field for a user"""
         stats = await self.get_stats(username=username)
@@ -135,7 +174,7 @@ class DonutStats:
         if value is None:
             raise UnexpectedError(f"DonutSMP failed to return a valid '{field}' field")
         return value
-    
+
     async def get_broken_blocks(self, username: str) -> int:
         """Returns a users DonutSMP broken blocks"""
         return await self._get_stat(username, "broken_blocks")
@@ -155,11 +194,11 @@ class DonutStats:
     async def get_balance(self, username: str) -> int:
         """Returns a users DonutSMP balance"""
         return await self._get_stat(username, "money")
-    
+
     async def get_money_made_from_sell(self, username: str) -> int:
         """Returns a users DonutSMP money made from sell"""
         return await self._get_stat(username, "money_made_from_sell")
-    
+
     async def get_money_spent_on_shop(self, username: str) -> int:
         """Returns a users DonutSMP money spent on shop"""
         return await self._get_stat(username, "money_spent_on_shop")
@@ -175,12 +214,17 @@ class DonutStats:
     async def get_shards(self, username: str) -> int:
         """Returns a users DonutSMP shards"""
         return await self._get_stat(username, "shards")
-    
-    async def get_stats_embed(self, username: str, color: discord.Color | None = None):
+
+    async def get_stats_embed(
+        self, username: str, color: discord.Color | None = None
+    ) -> discord.Embed:
         """Returns a premade stats embed, REQUIRES pip install donutstats[discord]"""
         if not _DISCORD:
-            raise RuntimeError("get_stats_embed() requires donutstats[discord], Install with: pip install donutstats[discord]")
-        stats: dict = await self.get_stats(username=username)
+            raise RuntimeError(
+                "get_stats_embed() requires donutstats[discord], "
+                "Install with: pip install donutstats[discord]"
+            )
+        stats: dict[str, int] = await self.get_stats(username=username)
         if color is None:
             color = discord.Color.blurple()
         embed = discord.Embed(
@@ -197,19 +241,19 @@ class DonutStats:
                 f"**Money Spent On /shop:** {fmt_amount(stats['money_spent_on_shop'])}\n"
                 f"**Money Made From /sell:** {fmt_amount(stats['money_made_from_sell'])}"
             ),
-            color=color
+            color=color,
         )
         embed.set_thumbnail(url=f"https://mc-heads.net/avatar/{username}")
 
         return embed
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> DonutStats:
         return self
 
-    async def __aexit__(self, *args):
+    async def __aexit__(self, *args: object) -> None:
         await self.close()
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the aiohttp session"""
         if self._session and not self._session.closed:
             await self._session.close()

@@ -2,13 +2,7 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .donutstats import (
-    DonutStats,
-    DonutSMPError,
-    UnauthorizedRequest,
-    RateLimited,
-    UnexpectedError
-)
+from .donutstats import DonutSMPError, DonutStats, RateLimited, UnauthorizedRequest, UnexpectedError
 
 __all__ = [
     "DonutStats",

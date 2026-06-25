@@ -26,10 +26,29 @@ dependencies = ["aiohttp>=3.9"]
 [project.optional-dependencies]
 discord = ["discord.py>=2.0"]
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
+dev = ["ruff>=0.6", "mypy>=1.11", "pre-commit>=3.7"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I isort, UP pyupgrade, B flake8-bugbear
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+# discord.py is an optional dep; don't fail when its stubs/package are absent
+module = ["discord", "discord.*"]
+ignore_missing_imports = true
 
 [project.urls]
 Homepage = "https://github.com/optccopa/donutstats"

@@ -1,12 +1,18 @@
-__pycache__/
+# Enviroment
 *.py[cod]
 *.egg-info/
 .eggs/
 build/
 dist/
-.pytest_cache/
 .venv/
 venv/
 .env
+
+# Caches
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Claude local
 .claude/

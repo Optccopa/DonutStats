@@ -8,20 +8,21 @@ from unittest.mock import AsyncMock, MagicMock
 import aiohttp
 import pytest
 
+from donutstats import (
+    DonutSMPError,
+    DonutStats,
+    RateLimited,
+    UnauthorizedRequest,
+    UnexpectedError,
+)
+from donutstats.utils import fmt_amount, fmt_playtime
+
 
 def rand_ign() -> str:
     """Random Minecraft-style username (3-16 chars). Mocked, so any name works."""
     length = random.randint(3, 16)
     return "".join(random.choices(string.ascii_letters + string.digits + "_", k=length))
 
-from donutstats import (
-    DonutStats,
-    DonutSMPError,
-    UnauthorizedRequest,
-    RateLimited,
-    UnexpectedError,
-)
-from donutstats.utils import fmt_amount, fmt_playtime
 
 SAMPLE_RESULT = {
     "money": 2577174314,
@@ -33,7 +34,7 @@ SAMPLE_RESULT = {
     "broken_blocks": 7285,
     "mobs_killed": 63,
     "money_spent_on_shop": 2688539,
-    "money_made_from_sell": 1.1477798052923137e+8,
+    "money_made_from_sell": 1.1477798052923137e8,
 }
 
 # get_stats() coerces every field to int; this is what it returns for SAMPLE_RESULT.
@@ -70,7 +71,10 @@ INT_METHODS = [
 
 
 def make_client(
-    *, status: int = 200, payload=None, json_exc: Exception | None = None,
+    *,
+    status: int = 200,
+    payload=None,
+    json_exc: Exception | None = None,
     enter_exc: Exception | None = None,
 ) -> tuple[DonutStats, MagicMock]:
     resp = MagicMock()
@@ -98,6 +102,7 @@ def make_client(
     ds._resolve_session = lambda: session
     return ds, session
 
+
 async def test_get_stats_returns_result_dict():
     ds, session = make_client(payload={"result": SAMPLE_RESULT})
     stats = await ds.get_stats("copa6076")
@@ -112,6 +117,7 @@ async def test_get_stats_url_encodes_username():
     await ds.get_stats("weird / name")
     url = session.get.call_args.args[0]
     assert url.endswith("/stats/weird%20%2F%20name")
+
 
 @pytest.mark.parametrize(
     "status,exc",
@@ -150,6 +156,15 @@ async def test_client_error_wrapped_as_unexpected():
     ds, _ = make_client(enter_exc=aiohttp.ClientError("boom"))
     with pytest.raises(UnexpectedError):
         await ds.get_stats("copa6076")
+
+
+async def test_timeout_wrapped_as_unexpected():
+    # aiohttp's total timeout surfaces as asyncio.TimeoutError, not a ClientError
+    ds, _ = make_client(enter_exc=TimeoutError())
+    with pytest.raises(UnexpectedError):
+        await ds.get_stats("copa6076")
+
+
 @pytest.mark.parametrize("method", INT_METHODS)
 async def test_int_methods_return_int(method):
     ds, _ = make_client(payload={"result": SAMPLE_RESULT})
@@ -285,5 +300,11 @@ async def test_lookup_missing_result_field_raises_unexpected():
 
 async def test_lookup_client_error_wrapped_as_unexpected():
     ds, _ = make_client(enter_exc=aiohttp.ClientError("boom"))
+    with pytest.raises(UnexpectedError):
+        await ds.lookup("copa6076")
+
+
+async def test_lookup_timeout_wrapped_as_unexpected():
+    ds, _ = make_client(enter_exc=TimeoutError())
     with pytest.raises(UnexpectedError):
         await ds.lookup("copa6076")
