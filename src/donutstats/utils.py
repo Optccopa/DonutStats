@@ -1,11 +1,11 @@
-from math import isnan
+from math import isfinite
 
 
 def fmt_amount(n: int | float) -> str:
     """Formats into a k / m / b / t string"""
     n = float(n)
-    if isnan(n):
-        raise ValueError(f"Cannot convert 'nan' (Value: {n})")
+    if not isfinite(n):
+        raise ValueError(f"Cannot convert 'nan' or 'inft' (Value: {n})")
     if abs(n) < 1000:
         return str(int(n)) if n == int(n) else f"{n:.2f}"
     for divisor, suffix in ((1e12, "t"), (1e9, "b"), (1e6, "m"), (1e3, "k")):

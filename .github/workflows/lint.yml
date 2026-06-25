@@ -1,0 +1,31 @@
+name: lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package + dev deps
+        run: pip install -e ".[dev]"
+
+      - name: Ruff lint (whole repo)
+        run: ruff check .
+
+      - name: Ruff format check (whole repo)
+        run: ruff format --check .
+
+      - name: Mypy (src only)
+        run: mypy
