@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "donutstats"
-version = "1.1.2"
+version = "1.2.2"
 description = "Async client for the DonutSMP API"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -37,7 +37,6 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-# E/W pycodestyle, F pyflakes, I isort, UP pyupgrade, B flake8-bugbear
 select = ["E", "F", "W", "I", "UP", "B"]
 
 [tool.mypy]
@@ -46,13 +45,12 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-# discord.py is an optional dep; don't fail when its stubs/package are absent
 module = ["discord", "discord.*"]
 ignore_missing_imports = true
 
 [project.urls]
-Homepage = "https://github.com/optccopa/donutstats"
-Issues = "https://github.com/optccopa/donutstats/issues"
+Homepage = "https://github.com/optccopa/DonutStats"
+Issues = "https://github.com/optccopa/DonutStats/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/donutstats"]

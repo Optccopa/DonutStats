@@ -7,7 +7,7 @@ from donutstats import DonutStats
 class Stats(commands.Cog):
     def __init__(self, bot: commands.Bot):
         # Initialize donutstats when your cog gets initialized
-        self.donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api")
+        self.donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api)")
 
     @discord.app_commands.command()
     async def stats(self, interaction: discord.Interaction, username: str):
