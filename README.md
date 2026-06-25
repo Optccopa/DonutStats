@@ -24,7 +24,7 @@ pip install donutstats[discord]
 ### Simple stats usage
 ```python
 import asyncio
-from donutstats import DonutStats
+from donutstats import DonutStats, DonutSMPError
 
 async def main():
     donutstats = DonutStats("Your DonutSMP api key (generate ingame with /api)")
@@ -42,6 +42,14 @@ async def main():
     print(lookup) # {'username': 'copa6076', 'rank': 'Unknown', 'location': 'Overworld'}
     print(lookup.get('location')) # 'Overworld'
 
+    # Unfound Player
+    try:
+        shards = await donutstats.get_shards(username="idontexist123d7") # Pull the shards from donutsmp api
+        print(shards)
+    except DonutSMPError:
+        # This code runs when the player is not found
+        print("Could not find player")
+
     await donutstats.close() # Close it when you close your bot
 
 asyncio.run(main())
@@ -49,7 +57,7 @@ asyncio.run(main())
 ## Functions
 | Name | Args | Returns |
 |---|---|---|
-| `await get_stats` | `username: str` | `dict[str, str]` |
+| `await get_stats` | `username: str` | `dict[str, int]` |
 | `await lookup` | `username: str` | `dict[str, str]` |
 | `await get_broken_blocks` | `username: str` | `int` |
 | `await get_deaths` | `username: str` | `int` |
@@ -62,14 +70,13 @@ asyncio.run(main())
 | `await get_playtime` | `username: str` | `int` |
 | `await get_shards` | `username: str` | `int` |
 | `await get_stats_embed` | `username: str, color: discord.Color \| Default` | `discord.Embed` - requires `donutstats[discord]` |
-| `await close` | `None` | `None` - Closes the session
+| `await close` | `None` | `None` - Closes the session |
 ## Exceptions
 
-- `DonutSMPError` - Raised when DonutSMP cannot handle a query, Very likely could not find username
+- `DonutSMPError` - Raised when DonutSMP cannot handle a query - Likely cannot find player/page/item
 - `UnauthorizedRequest` - Raised when DonutSMP returns a 401 unauthorized.
 - `RateLimited` - Raised when DonutSMP returns a 429 ratelimited
 - `UnexpectedError` - Raised when there is an unexpected api response status.
 
 ## License
-
-MIT License [LICENSE](LICENSE)
+Released under the MIT License. See [LICENSE](LICENSE).

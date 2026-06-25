@@ -24,17 +24,20 @@ from donutstats import (
 from donutstats.utils import fmt_amount, fmt_playtime
 
 SAMPLE_RESULT = {
-    "money": "2577174314",
-    "shards": "8461",
-    "kills": "24",
-    "deaths": "92",
-    "playtime": "1050579440",
-    "placed_blocks": "7524",
-    "broken_blocks": "7285",
-    "mobs_killed": "63",
-    "money_spent_on_shop": "2688539",
-    "money_made_from_sell": "1.1477798052923137e+8",
+    "money": 2577174314,
+    "shards": 8461,
+    "kills": 24,
+    "deaths": 92,
+    "playtime": 1050579440,
+    "placed_blocks": 7524,
+    "broken_blocks": 7285,
+    "mobs_killed": 63,
+    "money_spent_on_shop": 2688539,
+    "money_made_from_sell": 1.1477798052923137e+8,
 }
+
+# get_stats() coerces every field to int; this is what it returns for SAMPLE_RESULT.
+EXPECTED_STATS = {key: int(value) for key, value in SAMPLE_RESULT.items()}
 
 UNKNOWN_USER_BODY = {
     "status": 500,
@@ -98,7 +101,7 @@ def make_client(
 async def test_get_stats_returns_result_dict():
     ds, session = make_client(payload={"result": SAMPLE_RESULT})
     stats = await ds.get_stats("copa6076")
-    assert stats == SAMPLE_RESULT
+    assert stats == EXPECTED_STATS
     # auth header sent
     _, kwargs = session.get.call_args
     assert kwargs["headers"] == {"Authorization": "Bearer fake-token"}

@@ -52,16 +52,16 @@ class DonutStats:
         """
         Returns a users donutsmp stats as a dict
 
-        broken_blocks         string
-        deaths	              string
-        kills                 string
-        mobs_killed           string
-        money                 string
-        money_made_from_sell  string
-        money_spent_on_shop	  string
-        placed_blocks         string
-        playtime              string
-        shards                string
+        broken_blocks         int
+        deaths	              int
+        kills                 int
+        mobs_killed           int
+        money                 int
+        money_made_from_sell  int
+        money_spent_on_shop	  int
+        placed_blocks         int
+        playtime              int
+        shards                int
         """
         url = f"{self._base_url}/stats/{quote(username, safe='')}"
         session = self._resolve_session()
@@ -72,15 +72,19 @@ class DonutStats:
                 if resp.status == 429:
                     raise RateLimited("Ratelimited, DonutSMP currently has a ratelimit of 250 Reqs / Minute")
                 if resp.status != 200:
-                    raise DonutSMPError("Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
+                    raise DonutSMPError(f"Could not handle your request. This may be because the specified user/page/item does not exist. (Status: {resp.status})")
                 try:
                     data: dict = await resp.json(content_type=None)
                 except JSONDecodeError as e:
                     raise UnexpectedError("DonutSMP API failed to return valid json") from e
-                result = data.get('result')
+                result: dict = data.get('result')
                 if result is None:
                     raise UnexpectedError("DonutSMP API failed to return a result field")
-                return result
+                try:
+                    return {key: int(value) for key, value in result.items()}
+                except ValueError as e:
+                    raise UnexpectedError(e) from e
+
         except aiohttp.ClientError as e:
             raise UnexpectedError("Aiohttp had a ClientError, Refer to the traceback") from e
         
