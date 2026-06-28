@@ -81,7 +81,7 @@ asyncio.run(main())
 | `DonutSMPError` | Raised when DonutSMP cannot handle a query - Likely cannot find player/page/item
 | `UnauthorizedRequest` | Raised when DonutSMP returns a 401 unauthorized.
 | `RateLimited` | Raised when DonutSMP returns a 429 ratelimited
-| `UnexpectedErro r` | Raised when there is an unexpected api response status.
+| `UnexpectedError` | Raised when there is an unexpected api response status.
 
 ## License
 Released under the MIT License. See [LICENSE](LICENSE).
