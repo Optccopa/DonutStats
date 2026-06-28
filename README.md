@@ -49,7 +49,7 @@ async def main():
     # Unfound Player
     try:
         shards = await donutstats.get_shards(username="idontexist123d7") # Pull the shards from donutsmp api
-        print(shards)
+        print(shards) # Doesnt run
     except DonutSMPError:
         # This code runs when the player is not found
         print("Could not find player")
@@ -76,11 +76,12 @@ asyncio.run(main())
 | `await get_stats_embed` | `username: str, color: discord.Color \| Default` | `discord.Embed` - requires `donutstats[discord]` |
 | `await close` | `None` | `None` - Closes the session |
 ## Exceptions
-
-- `DonutSMPError` - Raised when DonutSMP cannot handle a query - Likely cannot find player/page/item
-- `UnauthorizedRequest` - Raised when DonutSMP returns a 401 unauthorized.
-- `RateLimited` - Raised when DonutSMP returns a 429 ratelimited
-- `UnexpectedError` - Raised when there is an unexpected api response status.
+| Name | Info |
+|---|---|
+| `DonutSMPError` | Raised when DonutSMP cannot handle a query - Likely cannot find player/page/item
+| `UnauthorizedRequest` | Raised when DonutSMP returns a 401 unauthorized.
+| `RateLimited` | Raised when DonutSMP returns a 429 ratelimited
+| `UnexpectedErro r` | Raised when there is an unexpected api response status.
 
 ## License
 Released under the MIT License. See [LICENSE](LICENSE).
